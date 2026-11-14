@@ -20,24 +20,78 @@ Or for a private repository:
 gh repo create astro-pixel-processing-workbench --private --source=. --remote=origin --push
 ```
 
-### Token Configuration (if using Freebuff Secrets)
+### ⚠️ Token Configuration (Important!)
 
-If your `GITHUB_TOKEN` is stored in Freebuff Secrets but Git push fails with 403 errors,
-you may need to:
+**Current Issue:** Fine-Grained Personal Access Tokens (PATs starting with `github_pat_`) 
+do NOT support Git operations over HTTPS. They only work with the REST API and GraphQL API.
 
-1. **Check token scopes**: The token needs `repo` scope for Git operations
-2. **Create a new token** if the current one is a Fine-Grained PAT without Git access:
-   - Go to https://github.com/settings/tokens
-   - Create a new token with `repo` scope (or `contents:write` for Fine-Grained)
-   - Update the Freebuff Secret with the new token
-3. **Verify token access**:
+If you encounter `403 Permission denied` errors when pushing:
+
+#### Solution 1: Create a Classic Personal Access Token (Recommended)
+
+1. Go to https://github.com/settings/tokens
+2. Click "Generate new token (classic)"
+3. Select scope: `repo` (full control of private repositories)
+4. Copy the token (starts with `ghp_`)
+5. Use it for Git operations:
    ```bash
-   curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/user
+   git push https://USERNAME:ghp_YOUR_TOKEN@github.com/USERNAME/REPO.git main
    ```
-   Then test Git access:
-   ```bash
-   git ls-remote https://${GITHUB_TOKEN}@github.com/USERNAME/REPO.git
-   ```
+
+#### Solution 2: Use GitHub CLI with Browser Login
+
+```bash
+# Clear any problematic token
+export -n GITHUB_TOKEN
+
+# Login via browser (uses session cookies, no PAT needed)
+gh auth login
+
+# Follow the interactive prompts
+# This allows Git operations without PAT issues
+
+# Then push
+git push -u origin main
+```
+
+#### Solution 3: Use SSH
+
+```bash
+# Generate SSH key if needed
+ssh-keygen -t ed25519 -C "your_email@example.com"
+
+# Add to GitHub: https://github.com/settings/keys
+
+# Configure Git to use SSH
+git remote set-url origin git@github.com:USERNAME/REPO.git
+
+# Push
+git push -u origin main
+```
+
+#### Testing Token Access
+
+Before pushing, verify your token works:
+
+**For Classic PAT (`ghp_`):**
+```bash
+curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/user
+# Should show your username
+
+# Test Git access
+GIT_ASKPASS=true git ls-remote https://${GITHUB_TOKEN}@github.com/USERNAME/REPO.git
+# Should list branches
+```
+
+**For Fine-Grained PAT (`github_pat_`):**
+```bash
+# Only works for API, NOT for Git push
+curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/user
+# Works
+
+git push https://${GITHUB_TOKEN}@github.com/USERNAME/REPO.git main
+# FAILS with 403
+```
 
 ## Manual Method
 
