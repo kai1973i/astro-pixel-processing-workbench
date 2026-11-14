@@ -20,6 +20,25 @@ Or for a private repository:
 gh repo create astro-pixel-processing-workbench --private --source=. --remote=origin --push
 ```
 
+### Token Configuration (if using Freebuff Secrets)
+
+If your `GITHUB_TOKEN` is stored in Freebuff Secrets but Git push fails with 403 errors,
+you may need to:
+
+1. **Check token scopes**: The token needs `repo` scope for Git operations
+2. **Create a new token** if the current one is a Fine-Grained PAT without Git access:
+   - Go to https://github.com/settings/tokens
+   - Create a new token with `repo` scope (or `contents:write` for Fine-Grained)
+   - Update the Freebuff Secret with the new token
+3. **Verify token access**:
+   ```bash
+   curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/user
+   ```
+   Then test Git access:
+   ```bash
+   git ls-remote https://${GITHUB_TOKEN}@github.com/USERNAME/REPO.git
+   ```
+
 ## Manual Method
 
 ### Step 1: Create a Repository on GitHub
