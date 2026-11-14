@@ -305,6 +305,56 @@ try {
     logWarning('Could not check git remotes');
   }
   
+  // Test GitHub token access (if GITHUB_TOKEN is set)
+  const githubToken = process.env.GITHUB_TOKEN;
+  if (githubToken) {
+    console.log('');
+    console.log(colors.bold + '🔑 GitHub Token Check...' + colors.reset);
+    console.log('');
+    
+    // Test API access
+    try {
+      const https = require('https');
+      const username = 'kai1973i'; // Could be extracted from token or config
+      const repo = 'astro-pixel-processing-workbench';
+      
+      const apiUrl = `https://api.github.com/repos/${username}/${repo}`;
+      https.get(apiUrl, { headers: { 'Authorization': `token ${githubToken}` } }, (res) => {
+        let data = '';
+        res.on('data', chunk => data += chunk);
+        res.on('end', () => {
+          try {
+            const json = JSON.parse(data);
+            if (res.statusCode === 200) {
+              logSuccess('GitHub Token: API access OK');
+              console.log(`  Repository: ${json.full_name}`);
+              console.log(`  Permissions: admin=${json.permissions.admin}, push=${json.permissions.push}`);
+              
+              if (!json.permissions.push) {
+                logWarning('Token has API access but may not have Git push access');
+                console.log('');
+                console.log('  ⚠️  If Git push fails with 403, the token may need:');
+                console.log('     - Classic PAT with "repo" scope, OR');
+                console.log('     - Fine-Grained PAT with Git repository content write access');
+                console.log('  See PUBLISH.md for details.');
+              }
+            } else {
+              logError(`GitHub Token: API access failed (${res.statusCode})`);
+              log(json.message || 'Unknown error');
+            }
+          } catch (e) {
+            logError('Could not parse API response');
+          }
+        });
+      }).on('error', (e) => {
+        logError('GitHub Token: API request failed');
+        log(e.message);
+      });
+    } catch (e) {
+      logWarning('Could not test GitHub token');
+    }
+  }
+  
 } catch (e) {
   logError('Git check failed: ' + e.message);
 }
