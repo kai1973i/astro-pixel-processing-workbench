@@ -1,6 +1,36 @@
 {
+  "name": "astro-pixel-processing-workbench",
+  "version": "1.0.0",
+  "description": "A web-based astrophotography image processing application inspired by Astro Pixel Processor (APP)",
+  "keywords": [
+    "astrophotography",
+    "image-processing",
+    "stacking",
+    "calibration",
+    "canvas",
+    "web-app"
+  ],
+  "homepage": "https://github.com/USERNAME/astro-pixel-processing-workbench",
+  "bugs": {
+    "url": "https://github.com/USERNAME/astro-pixel-processing-workbench/issues"
+  },
+  "license": "MIT",
+  "author": "Astro Workbench Contributors",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/USERNAME/astro-pixel-processing-workbench.git"
+  },
+  "scripts": {
+    "test": "node tests/simple-test.js",
+    "verify": "node scripts/verify-release-readiness.js",
+    "start": "python3 -m http.server 8000"
+  },
   "dependencies": {
     "@napi-rs/canvas": "^1.1.1",
     "jsdom": "^31.0.1"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=16.0.0"
   }
 }
