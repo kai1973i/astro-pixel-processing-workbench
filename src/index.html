@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Astro Pixel Processing Workbench</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <h1>Astro Pixel Processing Workbench</h1>
+            <div class="header-info">
+                <span class="status-indicator" id="statusIndicator">Ready</span>
+            </div>
+        </header>
+
+        <main class="app-main">
+            <aside class="panel panel-left">
+                <section class="panel-section">
+                    <h2>Frame Collection</h2>
+                    
+                    <div class="frame-type">
+                        <h3>Light Frames</h3>
+                        <button class="btn btn-secondary" id="btnLoadLights">Load Lights</button>
+                        <div class="frame-list" id="lightFramesList"></div>
+                        <span class="frame-count" id="lightCount">0 frames</span>
+                    </div>
+
+                    <div class="frame-type">
+                        <h3>Calibration Frames</h3>
+                        <button class="btn btn-secondary" id="btnLoadBias">Load Bias</button>
+                        <button class="btn btn-secondary" id="btnLoadDarks">Load Darks</button>
+                        <button class="btn btn-secondary" id="btnLoadFlats">Load Flats</button>
+                        <div class="frame-list" id="calFramesList"></div>
+                    </div>
+
+                    <div class="frame-type">
+                        <h3>Master Calibration</h3>
+                        <button class="btn btn-primary" id="btnCreateMasters">Create Masters</button>
+                        <div class="master-status" id="masterStatus">
+                            <span class="master-item">Bias: <span id="masterBiasStatus">Not created</span></span>
+                            <span class="master-item">Dark: <span id="masterDarkStatus">Not created</span></span>
+                            <span class="master-item">Flat: <span id="masterFlatStatus">Not created</span></span>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="panel-section">
+                    <h2>Processing Pipeline</h2>
+                    
+                    <div class="pipeline-steps">
+                        <div class="pipeline-step" id="stepCalibration">
+                            <div class="step-indicator">1</div>
+                            <div class="step-content">
+                                <h4>Calibration</h4>
+                                <p>Apply calibration frames to light frames</p>
+                                <button class="btn btn-small btn-primary" id="btnRunCalibration">Run Calibration</button>
+                                <span class="step-status" id="calibrationStatus">Not run</span>
+                            </div>
+                        </div>
+
+                        <div class="pipeline-step" id="stepAlignment">
+                            <div class="step-indicator">2</div>
+                            <div class="step-content">
+                                <h4>Alignment</h4>
+                                <p>Register and align frames using stars</p>
+                                <button class="btn btn-small btn-primary" id="btnRunAlignment">Run Alignment</button>
+                                <span class="step-status" id="alignmentStatus">Not run</span>
+                            </div>
+                        </div>
+
+                        <div class="pipeline-step" id="stepNormalization">
+                            <div class="step-indicator">3</div>
+                            <div class="step-content">
+                                <h4>Normalization</h4>
+                                <p>Normalize frame brightness levels</p>
+                                <button class="btn btn-small btn-primary" id="btnRunNormalization">Run Normalization</button>
+                                <span class="step-status" id="normalizationStatus">Not run</span>
+                            </div>
+                        </div>
+
+                        <div class="pipeline-step" id="stepStacking">
+                            <div class="step-indicator">4</div>
+                            <div class="step-content">
+                                <h4>Stacking</h4>
+                                <p>Integrate frames with rejection</p>
+                                <button class="btn btn-small btn-primary" id="btnRunStacking">Run Stack</button>
+                                <span class="step-status" id="stackingStatus">Not run</span>
+                            </div>
+                        </div>
+
+                        <div class="pipeline-step" id="stepPostprocess">
+                            <div class="step-indicator">5</div>
+                            <div class="step-content">
+                                <h4>Post-Processing</h4>
+                                <p>Background correction, color, stretching</p>
+                                <button class="btn btn-small btn-primary" id="btnRunPostprocess">Run Post-Process</button>
+                                <span class="step-status" id="postprocessStatus">Not run</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="panel-section">
+                    <h2>Settings</h2>
+                    <div class="settings-group">
+                        <label class="setting-item">
+                            <span>Stacking Method</span>
+                            <select id="stackingMethod">
+                                <option value="median">Median</option>
+                                <option value="average">Average</option>
+                                <option value="sigma-clipping">Sigma Clipping</option>
+                            </select>
+                        </label>
+                        <label class="setting-item">
+                            <span>Sigma Clipping Sigma</span>
+                            <input type="number" id="sigmaValue" value="3" min="1" max="10" step="0.5">
+                        </label>
+                        <label class="setting-item">
+                            <span>Rejection Threshold</span>
+                            <input type="number" id="rejectionThreshold" value="5" min="1" max="20" step="0.5">
+                        </label>
+                    </div>
+                </section>
+            </aside>
+
+            <section class="panel panel-center">
+                <div class="image-display-area">
+                    <div class="image-container" id="mainImageContainer">
+                        <canvas id="mainCanvas"></canvas>
+                        <div class="image-placeholder" id="imagePlaceholder">
+                            <span class="placeholder-icon">🖼️</span>
+                            <p>No image loaded</p>
+                            <span>Load light frames and run the pipeline to see results</span>
+                        </div>
+                    </div>
+                    <div class="image-controls">
+                        <button class="btn btn-small" id="btnZoomIn">🔍+</button>
+                        <button class="btn btn-small" id="btnZoomOut">🔍−</button>
+                        <button class="btn btn-small" id="btnZoomFit">Fit</button>
+                        <span class="zoom-level" id="zoomLevel">100%</span>
+                    </div>
+                </div>
+            </section>
+
+            <aside class="panel panel-right">
+                <section class="panel-section">
+                    <h2>Preview Adjustments</h2>
+                    
+                    <div class="adjustment-group">
+                        <h4>Stretch</h4>
+                        <label class="slider-item">
+                            <span>Black Point</span>
+                            <input type="range" id="blackPoint" min="0" max="1000" value="0">
+                            <span class="slider-value" id="blackPointValue">0</span>
+                        </label>
+                        <label class="slider-item">
+                            <span>White Point</span>
+                            <input type="range" id="whitePoint" min="0" max="65535" value="65535">
+                            <span class="slider-value" id="whitePointValue">65535</span>
+                        </label>
+                        <label class="slider-item">
+                            <span>Gamma</span>
+                            <input type="range" id="gamma" min="50" max="300" value="100">
+                            <span class="slider-value" id="gammaValue">1.0</span>
+                        </label>
+                    </div>
+
+                    <div class="adjustment-group">
+                        <h4>Color</h4>
+                        <label class="slider-item">
+                            <span>Brightness</span>
+                            <input type="range" id="brightness" min="0" max="200" value="100">
+                            <span class="slider-value" id="brightnessValue">100%</span>
+                        </label>
+                        <label class="slider-item">
+                            <span>Contrast</span>
+                            <input type="range" id="contrast" min="0" max="200" value="100">
+                            <span class="slider-value" id="contrastValue">100%</span>
+                        </label>
+                        <label class="slider-item">
+                            <span>Saturation</span>
+                            <input type="range" id="saturation" min="0" max="200" value="100">
+                            <span class="slider-value" id="saturationValue">100%</span>
+                        </label>
+                    </div>
+
+                    <div class="adjustment-group">
+                        <h4>Background</h4>
+                        <label class="slider-item">
+                            <span>Background Level</span>
+                            <input type="range" id="bgLevel" min="0" max="1000" value="0">
+                            <span class="slider-value" id="bgLevelValue">0</span>
+                        </label>
+                    </div>
+
+                    <button class="btn btn-secondary btn-full" id="btnResetAdjustments">Reset Adjustments</button>
+                </section>
+
+                <section class="panel-section">
+                    <h2>Export</h2>
+                    <div class="export-options">
+                        <label class="export-format">
+                            <input type="radio" name="exportFormat" value="png" checked>
+                            <span>PNG</span>
+                        </label>
+                        <label class="export-format">
+                            <input type="radio" name="exportFormat" value="jpeg">
+                            <span>JPEG</span>
+                        </label>
+                        <label class="export-format">
+                            <input type="radio" name="exportFormat" value="webp">
+                            <span>WebP</span>
+                        </label>
+                    </div>
+                    <button class="btn btn-primary btn-full" id="btnExport">Export Image</button>
+                    <div class="export-info" id="exportInfo"></div>
+                </section>
+
+                <section class="panel-section">
+                    <h2>Processing Log</h2>
+                    <div class="log-window" id="logWindow">
+                        <div class="log-entry">Application started</div>
+                    </div>
+                    <button class="btn btn-small btn-secondary" id="btnClearLog">Clear Log</button>
+                </section>
+            </aside>
+        </main>
+
+        <footer class="app-footer">
+            <div class="footer-info">
+                <span>Astro Pixel Processing Workbench</span>
+                <span id="frameInfo">No frames loaded</span>
+            </div>
+        </footer>
+    </div>
+
+    <input type="file" id="fileInputLights" accept="image/*" multiple style="display: none;">
+    <input type="file" id="fileInputBias" accept="image/*" multiple style="display: none;">
+    <input type="file" id="fileInputDarks" accept="image/*" multiple style="display: none;">
+    <input type="file" id="fileInputFlats" accept="image/*" multiple style="display: none;">
+
+    <script src="js/imageProcessor.js"></script>
+    <script src="js/calibration.js"></script>
+    <script src="js/aligner.js"></script>
+    <script src="js/stacker.js"></script>
+    <script src="js/colorCorrect.js"></script>
+    <script src="js/export.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

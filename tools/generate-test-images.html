@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generate Test Images for Astro Workbench</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 { color: #58a6ff; }
+        .controls {
+            background: #161b22;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .control-group {
+            margin: 15px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #8b949e;
+        }
+        input, select {
+            background: #21262d;
+            border: 1px solid #30363d;
+            color: #c9d1d9;
+            padding: 8px;
+            border-radius: 4px;
+            width: 100%;
+        }
+        button {
+            background: #58a6ff;
+            color: #fff;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 10px 5px;
+        }
+        button:hover { background: #4c9aed; }
+        .info {
+            background: #161b22;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+            font-size: 13px;
+        }
+        .download-links {
+            margin-top: 20px;
+        }
+        .download-link {
+            display: inline-block;
+            background: #21262d;
+            color: #58a6ff;
+            padding: 10px 15px;
+            margin: 5px;
+            text-decoration: none;
+            border-radius: 4px;
+        }
+        .download-link:hover {
+            background: #30363d;
+        }
+    </style>
+</head>
+<body>
+    <h1>⭐ Test Image Generator for Astro Pixel Processing Workbench</h1>
+    
+    <div class="info">
+        <strong>Purpose:</strong> Generate synthetic test images that simulate astrophotography frames.
+        These can be used to test the processing pipeline without needing real telescope data.
+    </div>
+    
+    <div class="controls">
+        <div class="control-group">
+            <label>Image Width (pixels)</label>
+            <input type="number" id="width" value="640" min="100" max="4000">
+        </div>
+        
+        <div class="control-group">
+            <label>Image Height (pixels)</label>
+            <input type="number" id="height" value="480" min="100" max="4000">
+        </div>
+        
+        <div class="control-group">
+            <label>Number of Stars</label>
+            <input type="number" id="starCount" value="100" min="0" max="1000">
+        </div>
+        
+        <div class="control-group">
+            <label>Background Level (0-50)</label>
+            <input type="number" id="bgLevel" value="10" min="0" max="50">
+        </div>
+        
+        <div class="control-group">
+            <label>Noise Level (0-20)</label>
+            <input type="number" id="noiseLevel" value="5" min="0" max="20">
+        </div>
+        
+        <div class="control-group">
+            <label>Generate Calibration Frames</label>
+            <label><input type="checkbox" id="genBias"> Bias (same as background)</label>
+            <label><input type="checkbox" id="genDark"> Dark (brighter, more noise)</label>
+            <label><input type="checkbox" id="genFlat> Flat (gradient pattern)</label>
+        </div>
+        
+        <div class="control-group">
+            <label>Number of Light Frames to Generate</label>
+            <input type="number" id="frameCount" value="5" min="1" max="20">
+        </div>
+        
+        <button onclick="generateImages()">Generate Images</button>
+        <button onclick="downloadAll()">Download All as ZIP</button>
+    </div>
+    
+    <div id="downloadArea" class="download-links"></div>
+    
+    <script>
+        let generatedBlobs = [];
+        
+        function generateTestImage(width, height, starCount, bgLevel, noiseLevel, variation = 0) {
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            
+            const imageData = ctx.createImageData(width, height);
+            const data = imageData.data;
+            
+            // Fill with background + noise
+            for (let i = 0; i < width * height; i++) {
+                const noise = (Math.random() - 0.5) * noiseLevel * 2;
+                const value = Math.max(0, Math.min(255, bgLevel + noise + variation));
+                data[i * 4] = value;
+                data[i * 4 + 1] = value;
+                data[i * 4 + 2] = value;
+                data[i * 4 + 3] = 255;
+            }
+            
+            // Add stars
+            for (let s = 0; s < starCount; s++) {
+                const x = Math.random() * width;
+                const y = Math.random() * height;
+                const brightness = 100 + Math.random() * 155;
+                const size = 1 + Math.random() * 3;
+                
+                // Draw star as Gaussian
+                for (let dy = -Math.ceil(size); dy <= Math.ceil(size); dy++) {
+                    for (let dx = -Math.ceil(size); dx <= Math.ceil(size); dx++) {
+                        const px = Math.floor(x + dx);
+                        const py = Math.floor(y + dy);
+                        
+                        if (px >= 0 && px < width && py >= 0 && py < height) {
+                            const dist = Math.sqrt(dx * dx + dy * dy);
+                            if (dist <= size) {
+                                const falloff = Math.exp(-dist * dist / (size * size * 0.5));
+                                const idx = (py * width + px) * 4;
+                                const starValue = brightness * falloff;
+                                data[idx] = Math.min(255, data[idx] + starValue);
+                                data[idx + 1] = Math.min(255, data[idx + 1] + starValue * 0.9);
+                                data[idx + 2] = Math.min(255, data[idx + 2] + starValue * 0.8);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            ctx.putImageData(imageData, 0, 0);
+            return canvas;
+        }
+        
+        function generateCalibrationFrames(width, height, bgLevel, noiseLevel) {
+            const frames = {};
+            
+            if (document.getElementById('genBias').checked) {
+                // Bias: just background with minimal noise
+                const canvas = generateTestImage(width, height, 0, bgLevel * 0.1, 1, 0);
+                frames.bias = canvas.toDataURL('image/png');
+            }
+            
+            if (document.getElementById('genDark').checked) {
+                // Dark: longer exposure, more thermal noise
+                const canvas = generateTestImage(width, height, 0, bgLevel * 0.5, noiseLevel * 2, 15);
+                frames.dark = canvas.toDataURL('image/png');
+            }
+            
+            if (document.getElementById('genFlat').checked) {
+                // Flat: illumination gradient
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                
+                const gradient = ctx.createRadialGradient(
+                    width * 0.3, height * 0.4, 0,
+                    width * 0.5, height * 0.5, width * 0.7
+                );
+                gradient.addColorStop(0, 'rgb(220, 220, 220)');
+                gradient.addColorStop(1, 'rgb(180, 180, 180)');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, width, height);
+                
+                frames.flat = canvas.toDataURL('image/png');
+            }
+            
+            return frames;
+        }
+        
+        async function generateImages() {
+            const width = parseInt(document.getElementById('width').value);
+            const height = parseInt(document.getElementById('height').value);
+            const starCount = parseInt(document.getElementById('starCount').value);
+            const bgLevel = parseInt(document.getElementById('bgLevel').value);
+            const noiseLevel = parseInt(document.getElementById('noiseLevel').value);
+            const frameCount = parseInt(document.getElementById('frameCount').value);
+            
+            generatedBlobs = [];
+            let html = '<h3>Generated Images:</h3>';
+            
+            // Generate light frames with slight variations
+            for (let i = 0; i < frameCount; i++) {
+                const variation = (Math.random() - 0.5) * 5;
+                const canvas = generateTestImage(width, height, starCount, bgLevel, noiseLevel, variation);
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                
+                const url = URL.createObjectURL(blob);
+                generatedBlobs.push({ name: `light_${i + 1}.png`, blob, url });
+                
+                html += `<a href="${url}" class="download-link" download="light_${i + 1}.png">
+                    Light Frame ${i + 1} (${width}x${height})
+                </a>`;
+            }
+            
+            // Generate calibration frames
+            const calFrames = generateCalibrationFrames(width, height, bgLevel, noiseLevel);
+            
+            if (calFrames.bias) {
+                const blob = await (await fetch(calFrames.bias)).blob();
+                const url = URL.createObjectURL(blob);
+                generatedBlobs.push({ name: 'bias.png', blob, url });
+                html += `<a href="${url}" class="download-link" download="bias.png">Bias Frame</a>`;
+            }
+            
+            if (calFrames.dark) {
+                const blob = await (await fetch(calFrames.dark)).blob();
+                const url = URL.createObjectURL(blob);
+                generatedBlobs.push({ name: 'dark.png', blob, url });
+                html += `<a href="${url}" class="download-link" download="dark.png">Dark Frame</a>`;
+            }
+            
+            if (calFrames.flat) {
+                const blob = await (await fetch(calFrames.flat)).blob();
+                const url = URL.createObjectURL(blob);
+                generatedBlobs.push({ name: 'flat.png', blob, url });
+                html += `<a href="${url}" class="download-link" download="flat.png">Flat Frame</a>`;
+            }
+            
+            document.getElementById('downloadArea').innerHTML = html;
+        }
+        
+        async function downloadAll() {
+            if (generatedBlobs.length === 0) {
+                alert('Generate images first!');
+                return;
+            }
+            
+            // Create a simple ZIP using JSZip if available, or download individually
+            for (const item of generatedBlobs) {
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(item.blob);
+                link.download = item.name;
+                link.click();
+                await new Promise(r => setTimeout(r, 100)); // Small delay between downloads
+            }
+        }
+    </script>
+</body>
+</html>

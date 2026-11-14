@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Astro Workbench Test</title>
+    <link rel="stylesheet" href="../src/css/style.css">
+    <style>
+        .test-results {
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .test-pass { color: #3fb950; }
+        .test-fail { color: #f85149; }
+    </style>
+</head>
+<body>
+    <h1>Astro Pixel Processing Workbench - Test Page</h1>
+    
+    <div class="test-results">
+        <h2>Module Tests</h2>
+        <div id="testResults"></div>
+    </div>
+
+    <script src="../src/js/imageProcessor.js"></script>
+    <script src="../src/js/calibration.js"></script>
+    <script src="../src/js/aligner.js"></script>
+    <script src="../src/js/stacker.js"></script>
+    <script src="../src/js/colorCorrect.js"></script>
+    <script src="../src/js/export.js"></script>
+    <script>
+        const testResults = [];
+        
+        function test(name, fn) {
+            try {
+                fn();
+                testResults.push({ name, status: 'pass' });
+            } catch (e) {
+                testResults.push({ name, status: 'fail', error: e.message });
+            }
+        }
+        
+        function assert(condition, message) {
+            if (!condition) {
+                throw new Error(message || 'Assertion failed');
+            }
+        }
+        
+        function assertEqual(actual, expected, message) {
+            if (actual !== expected) {
+                throw new Error(message || `Expected ${expected}, got ${actual}`);
+            }
+        }
+        
+        function assertArrayEqual(actual, expected, message) {
+            if (actual.length !== expected.length) {
+                throw new Error(message || `Array lengths differ: ${actual.length} vs ${expected.length}`);
+            }
+            for (let i = 0; i < actual.length; i++) {
+                if (actual[i] !== expected[i]) {
+                    throw new Error(message || `Array differs at index ${i}`);
+                }
+            }
+        }
+        
+        // Test ImageProcessor
+        test('ImageProcessor initialization', () => {
+            const canvas = document.createElement('canvas');
+            const processor = new ImageProcessor();
+            processor.init(canvas);
+            assert(processor.canvas !== null, 'Canvas not initialized');
+            assert(processor.ctx !== null, 'Context not initialized');
+        });
+        
+        test('ImageProcessor createBlank', () => {
+            const canvas = document.createElement('canvas');
+            const processor = new ImageProcessor();
+            processor.init(canvas);
+            processor.createBlank(100, 100);
+            assert(processor.width === 100, 'Width not set');
+            assert(processor.height === 100, 'Height not set');
+            assert(processor.imageData !== null, 'ImageData not created');
+        });
+        
+        test('ImageProcessor toGrayscale', () => {
+            const canvas = document.createElement('canvas');
+            const processor = new ImageProcessor();
+            processor.init(canvas);
+            processor.createBlank(10, 10);
+            
+            // Set some colored pixels
+            for (let i = 0; i < 100; i++) {
+                processor.imageData.data[i * 4] = 255;     // R
+                processor.imageData.data[i * 4 + 1] = 0;   // G
+                processor.imageData.data[i * 4 + 2] = 0;   // B
+            }
+            
+            processor.toGrayscale();
+            
+            // Check first pixel (should be gray ~76)
+            const gray = processor.imageData.data[0];
+            assert(gray > 70 && gray < 80, `Grayscale value should be ~76, got ${gray}`);
+        });
+        
+        test('ImageProcessor getStatistics', () => {
+            const canvas = document.createElement('canvas');
+            const processor = new ImageProcessor();
+            processor.init(canvas);
+            processor.createBlank(100, 100);
+            
+            // Fill with uniform value
+            for (let i = 0; i < 10000; i++) {
+                processor.imageData.data[i * 4] = 100;
+                processor.imageData.data[i * 4 + 1] = 150;
+                processor.imageData.data[i * 4 + 2] = 200;
+            }
+            
+            const stats = processor.getStatistics();
+            assertEqual(stats.red.min, 100, 'Red min');
+            assertEqual(stats.red.max, 100, 'Red max');
+            assertEqual(stats.green.min, 150, 'Green min');
+            assertEqual(stats.green.max, 150, 'Green max');
+            assertEqual(stats.blue.min, 200, 'Blue min');
+            assertEqual(stats.blue.max, 200, 'Blue max');
+        });
+        
+        // Test Stacker
+        test('Stacker median', () => {
+            const stacker = new Stacker();
+            const result = stacker.median([1, 2, 3, 4, 5]);
+            assertEqual(result, 3, 'Median of odd array');
+        });
+        
+        test('Stacker median even', () => {
+            const stacker = new Stacker();
+            const result = stacker.median([1, 2, 3, 4]);
+            assertEqual(result, 2.5, 'Median of even array');
+        });
+        
+        test('Stacker mean', () => {
+            const stacker = new Stacker();
+            const result = stacker.mean([1, 2, 3, 4, 5]);
+            assertEqual(result, 3, 'Mean calculation');
+        });
+        
+        test('Stacker sigmaClip', () => {
+            const stacker = new Stacker();
+            // Test with uniform values (should return median)
+            const result = stacker.sigmaClip([10, 10, 10, 10, 100], 3);
+            assert(result === 10, `Sigma clip should reject outlier, got ${result}`);
+        });
+        
+        // Test CalibrationManager
+        test('CalibrationManager initialization', () => {
+            const canvas = document.createElement('canvas');
+            const processor = new ImageProcessor();
+            processor.init(canvas);
+            const cal = new CalibrationManager(processor);
+            
+            assertEqual(cal.getCounts().bias, 0, 'Initial bias count');
+            assertEqual(cal.getCounts().dark, 0, 'Initial dark count');
+            assertEqual(cal.getCounts().flat, 0, 'Initial flat count');
+        });
+        
+        test('CalibrationManager addBiasFrames', () => {
+            const canvas = document.createElement('canvas');
+            const processor = new ImageProcessor();
+            processor.init(canvas);
+            const cal = new CalibrationManager(processor);
+            
+            const mockFiles = [new Blob(), new Blob()];
+            cal.addBiasFrames(mockFiles);
+            
+            assertEqual(cal.getCounts().bias, 2, 'Bias count after add');
+        });
+        
+        test('CalibrationManager isReady', () => {
+            const canvas = document.createElement('canvas');
+            const processor = new ImageProcessor();
+            processor.init(canvas);
+            const cal = new CalibrationManager(processor);
+            
+            const ready = cal.isReady();
+            assertEqual(ready.ready, false, 'Not ready initially');
+            assertEqual(ready.hasBias, false, 'No bias');
+            assertEqual(ready.hasDark, false, 'No dark');
+            assertEqual(ready.hasFlat, false, 'No flat');
+        });
+        
+        // Test ColorCorrector
+        test('ColorCorrector constructor', () => {
+            const canvas = document.createElement('canvas');
+            const processor = new ImageProcessor();
+            processor.init(canvas);
+            const cc = new ColorCorrector(processor);
+            assert(cc !== null, 'ColorCorrector created');
+        });
+        
+        // Test ExportManager
+        test('ExportManager constructor', () => {
+            const canvas = document.createElement('canvas');
+            const processor = new ImageProcessor();
+            processor.init(canvas);
+            const exp = new ExportManager(processor);
+            assert(exp !== null, 'ExportManager created');
+        });
+        
+        test('ExportManager getExportOptions', () => {
+            const canvas = document.createElement('canvas');
+            const processor = new ImageProcessor();
+            processor.init(canvas);
+            const exp = new ExportManager(processor);
+            
+            const options = exp.getExportOptions();
+            assert(options.length === 5, 'Should have 5 export options');
+            assertEqual(options[0].format, 'png', 'First option is PNG');
+        });
+        
+        // Display results
+        function displayResults() {
+            const resultsDiv = document.getElementById('testResults');
+            resultsDiv.innerHTML = '';
+            
+            let passCount = 0;
+            let failCount = 0;
+            
+            for (const result of testResults) {
+                const div = document.createElement('div');
+                div.className = 'test-' + result.status;
+                
+                if (result.status === 'pass') {
+                    div.textContent = '✓ ' + result.name;
+                    passCount++;
+                } else {
+                    div.textContent = '✗ ' + result.name + ' - ' + result.error;
+                    failCount++;
+                }
+                
+                resultsDiv.appendChild(div);
+            }
+            
+            const summary = document.createElement('h3');
+            summary.textContent = `Results: ${passCount} passed, ${failCount} failed`;
+            summary.style.marginTop = '20px';
+            resultsDiv.appendChild(summary);
+        }
+        
+        // Run tests
+        displayResults();
+        
+        // Create a simple test image
+        const testCanvas = document.createElement('canvas');
+        testCanvas.width = 200;
+        testCanvas.height = 200;
+        const ctx = testCanvas.getContext('2d');
+        
+        // Draw gradient for testing
+        const gradient = ctx.createLinearGradient(0, 0, 200, 200);
+        gradient.addColorStop(0, '#000000');
+        gradient.addColorStop(0.5, '#808080');
+        gradient.addColorStop(1, '#ffffff');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, 200, 200);
+        
+        // Add some star-like dots
+        ctx.fillStyle = '#ffffff';
+        for (let i = 0; i < 50; i++) {
+            const x = Math.random() * 200;
+            const y = Math.random() * 200;
+            const r = Math.random() * 2 + 1;
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        document.body.appendChild(testCanvas);
+        document.body.appendChild(document.createElement('br'));
+    </script>
+</body>
+</html>
