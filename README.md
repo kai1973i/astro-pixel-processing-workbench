@@ -1,122 +1,106 @@
 # Astro Pixel Processing Workbench
 
-A web-based astrophotography image processing application inspired by Astro Pixel Processor (APP).
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-F7DF1E?logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
+[![HTML5](https://img.shields.io/badge/HTML5-E34F25?logo=html5&logoColor=white)](https://html.spec.whatwg.org/)
+[![No Build](https://img.shields.io/badge/Build-no--build-181717?logo=github)](https://github.com)
 
-## What It Does
+> A web-based astrophotography image processing application inspired by Astro Pixel Processor (APP)
 
-This application provides a complete workflow for processing deep-sky astrophotography images:
+![Screenshot](docs/screenshot.png)
 
-1. **Import calibration frames** - Load bias, dark, and flat frames along with light frames
-2. **Calibration** - Apply calibration to remove sensor noise and optical artifacts
-3. **Alignment** - Register and align multiple frames using star detection
-4. **Stacking** - Integrate multiple frames with outlier rejection for noise reduction
-5. **Post-processing** - Background correction, color calibration, stretching
-6. **Export** - Save processed images in various formats
+## ⚡ Quick Start
 
-## Workflow
-
-The typical processing workflow:
-
-1. Load your light frames (the images you want to stack)
-2. Load calibration frames if available (bias, dark, flat)
-3. Create master calibration frames
-4. Apply calibration to light frames
-5. Analyze stars and align frames
-6. Normalize and stack with rejection
-7. Apply post-processing (gradient removal, color calibration)
-8. Preview and stretch the result
-9. Export the final image
-
-## Project Structure
-
-```
-src/
-├── index.html          # Main application page
-├── css/
-│   └── style.css       # Styles
-└── js/
-    ├── app.js          # Main application controller
-    ├── imageProcessor.js # Core image processing
-    ├── calibration.js  # Calibration frame handling
-    ├── stacker.js      # Stacking engine
-    ├── aligner.js      # Image alignment
-    ├── colorCorrect.js # Color/gradient corrections
-    └── export.js       # Export functionality
-```
-
-## Technology
-
-- Pure HTML5 + JavaScript (no build step required)
-- Canvas API for image processing
-- Browser File API for loading images
-- Works entirely client-side (no server needed)
-
-## Getting Started
-
-### Quick Start
-
-Open `src/index.html` directly in a modern web browser:
-
-```
-file:///path/to/project/src/index.html
-```
-
-Or serve with any static file server for better compatibility:
+Open `src/index.html` in a modern web browser, or serve locally:
 
 ```bash
 # Using Python
-cd /workspace/chats/d3accba782cb8366727d20e9
 python3 -m http.server 8000
+# Then open http://localhost:8000/src/index.html
 ```
 
-Then open http://localhost:8000/src/index.html
+Or with Node.js:
 
-### Test Images
+```bash
+npx http-server
+# Then open http://localhost:8080/src/index.html
+```
 
-To test the application without real astrophotography data, use the test image generator:
+No build step required! Works entirely in the browser.
 
-1. Open `tools/generate-test-images.html` in a browser
-2. Configure the test image parameters
-3. Generate test frames
-4. Download and load them into the main application
+## ✨ Features
 
-### Running Tests
+- **📸 Frame Loading** - Load light, bias, dark, and flat frames
+- **🔬 Calibration** - Create master calibration frames (bias, dark, flat) and apply to light frames
+- **⭐ Alignment** - Star-based image registration and alignment
+- **📊 Stacking** - Multiple methods: median, average, sigma clipping with outlier rejection
+- **🎨 Post-Processing** - Background/gradient correction, histogram stretching, color adjustments
+- **💾 Export** - Save as PNG, JPEG, WebP
+- **⚡ Real-time Preview** - Interactive adjustments with zoom controls
+- **🧪 Test Generator** - Generate synthetic test images for demo
+- **✅ Tests** - 21 unit tests passing
 
-To run the automated test suite:
+## 🚀 Workflow
+
+```
+1. Load frames → 2. Create masters → 3. Calibrate → 4. Align → 5. Normalize → 6. Stack → 7. Post-process → 8. Export
+```
+
+See [docs/workflow.md](docs/workflow.md) for detailed instructions.
+
+## 📖 Documentation
+
+- [Architecture](docs/architecture.md) - System design and components
+- [Workflow Guide](docs/workflow.md) - Step-by-step processing guide
+- [Publishing Guide](PUBLISH.md) - How to publish to GitHub
+
+## 🛠️ Technology
+
+- **Frontend:** HTML5, CSS3, Vanilla JavaScript (ES6+)
+- **Image Processing:** Canvas API with `willReadFrequently` optimization
+- **No Backend Required** - Runs entirely client-side
+- **No Dependencies** - Zero external libraries for core functionality
+
+## 🧪 Running Tests
 
 ```bash
 npm install
-npm test  # or: node tests/simple-test.js
+npm test
+```
+
+Or run directly with Node.js:
+
+```bash
+node tests/simple-test.js
 ```
 
 All 21 module tests should pass.
 
-## Documentation
+## 🎯 Generated Test Images
 
-See [docs/architecture.md](docs/architecture.md) for system architecture details.
+Generate synthetic test images to try the application without real astrophotography data:
 
-## Status
+1. Open `tools/generate-test-images.html` in a browser
+2. Configure parameters (size, star count, noise level, etc.)
+3. Click "Generate Images"
+4. Download and load into the main application
 
-✅ **Application Complete** - All core features implemented and tested.
+## 🤝 Contributing
 
-### Completed Features
+Contributions are welcome! Feel free to submit issues and enhancement requests.
 
-- ✅ File loading for light, bias, dark, and flat frames
-- ✅ Master calibration frame creation (median combine)
-- ✅ Calibration application to light frames
-- ✅ Star-based image alignment
-- ✅ Frame normalization
-- ✅ Stacking with multiple methods (median, average, sigma clipping)
-- ✅ Background/gradient correction
-- ✅ Histogram stretching and color adjustments
-- ✅ Export to PNG, JPEG, WebP
-- ✅ Real-time preview with zoom controls
-- ✅ Complete processing pipeline UI
-- ✅ Test image generator for demo
-- ✅ Unit tests (21 tests passing)
+## 📄 License
 
-See [PROJECT_PLAN.md](PROJECT_PLAN.md) for detailed progress and [STATUS.md](STATUS.md) for current status.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Not a Copy
+## 🙏 Acknowledgment
 
-This project is inspired by Astro Pixel Processor but is not a copy. We implement similar workflow concepts while making our own design decisions. Features may differ, and we may add capabilities beyond what APP offers.
+This project is **inspired by** [Astro Pixel Processor (APP)](https://www.astropixelprocessor.com) but is **not a copy**. It implements similar workflow concepts while making its own design decisions.
+
+## 📧 Contact
+
+For questions or support, open an issue on GitHub.
+
+---
+
+**Project Status:** ✅ Complete - All core features implemented and tested
