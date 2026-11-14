@@ -306,53 +306,72 @@ try {
   }
   
   // Test GitHub token access (if GITHUB_TOKEN is set)
-  const githubToken = process.env.GITHUB_TOKEN;
-  if (githubToken) {
+  const githubToken = process.env.GITHUB_TOKEN || null;
+  
+  if (githubToken && githubToken.startsWith('github_pat_')) {
+    console.log('');
+    console.log(colors.yellow + '⚠️  GitHub Token is Fine-Grained PAT (github_pat_)' + colors.reset);
+    console.log('');
+    console.log('  Fine-Grained PATs do NOT support Git operations over HTTPS!');
+    console.log('  Only REST API and GraphQL API access is available.');
+    console.log('');
+    console.log('  Solution: Use one of these:');
+    console.log('    1. Classic PAT (ghp_...) with "repo" scope');
+    console.log('    2. gh auth login (browser-based session)');
+    console.log('    3. SSH keys instead of HTTPS');
+    console.log('');
+    console.log('  See PUBLISH.md for detailed instructions.');
+  } else if (githubToken) {
+    console.log('');
+    console.log(colors.bold + '🔑 Checking GitHub Token...' + colors.reset);
+    console.log('');
+    
+    // Synchronous test using execSync
+    try {
+      const { execSync } = require('child_process');
+      const username = 'kai1973i';
+      const repo = 'astro-pixel-processing-workbench';
+      
+      const result = execSync(
+        `curl -s -H "Authorization: token ${githubToken}" ` +
+        `https://api.github.com/repos/${username}/${repo}`,
+        { encoding: 'utf-8', timeout: 10000 }
+      );
+      
+      const json = JSON.parse(result);
+      
+      if (json.name) {
+        logSuccess('GitHub Token: API access OK');
+        console.log(`  Repository: ${json.full_name}`);
+        
+        if (json.permissions) {
+          console.log(`  Permissions: admin=${json.permissions.admin}, push=${json.permissions.push}`);
+          
+          if (json.permissions.push) {
+            logSuccess('Token has push permission - Git operations should work');
+          } else {
+            logWarning('Token may not have Git push access');
+            console.log('');
+            console.log('  If Git push fails with 403, create a token with "repo" scope.');
+            console.log('  See PUBLISH.md for instructions.');
+          }
+        }
+      } else {
+        logError('Could not verify repository access');
+      }
+    } catch (e) {
+      logWarning('Could not test GitHub token: ' + e.message);
+    }
+  } else {
     console.log('');
     console.log(colors.bold + '🔑 GitHub Token Check...' + colors.reset);
     console.log('');
-    
-    // Test API access
-    try {
-      const https = require('https');
-      const username = 'kai1973i'; // Could be extracted from token or config
-      const repo = 'astro-pixel-processing-workbench';
-      
-      const apiUrl = `https://api.github.com/repos/${username}/${repo}`;
-      https.get(apiUrl, { headers: { 'Authorization': `token ${githubToken}` } }, (res) => {
-        let data = '';
-        res.on('data', chunk => data += chunk);
-        res.on('end', () => {
-          try {
-            const json = JSON.parse(data);
-            if (res.statusCode === 200) {
-              logSuccess('GitHub Token: API access OK');
-              console.log(`  Repository: ${json.full_name}`);
-              console.log(`  Permissions: admin=${json.permissions.admin}, push=${json.permissions.push}`);
-              
-              if (!json.permissions.push) {
-                logWarning('Token has API access but may not have Git push access');
-                console.log('');
-                console.log('  ⚠️  If Git push fails with 403, the token may need:');
-                console.log('     - Classic PAT with "repo" scope, OR');
-                console.log('     - Fine-Grained PAT with Git repository content write access');
-                console.log('  See PUBLISH.md for details.');
-              }
-            } else {
-              logError(`GitHub Token: API access failed (${res.statusCode})`);
-              log(json.message || 'Unknown error');
-            }
-          } catch (e) {
-            logError('Could not parse API response');
-          }
-        });
-      }).on('error', (e) => {
-        logError('GitHub Token: API request failed');
-        log(e.message);
-      });
-    } catch (e) {
-      logWarning('Could not test GitHub token');
-    }
+    logWarning('GITHUB_TOKEN environment variable not set');
+    console.log('');
+    console.log('  To enable automated token validation, set:');
+    console.log('    export GITHUB_TOKEN=your_token_here');
+    console.log('');
+    console.log('  Or use gh auth login for browser-based authentication.');
   }
   
 } catch (e) {
